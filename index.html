@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PKV-BRE Break-Even-Rechner für Bundesbeamte (Debeka)</title>
+<style>
+  :root{
+    --primary:#0d5c63; --accent:#e07a5f; --bg:#f7f7f5; --card:#ffffff;
+    --text:#1a1a1a; --muted:#5c5c5c; --good:#2e7d32; --bad:#c62828; --border:#d8d8d4;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--text); margin:0; padding:0;
+    font-size:16px; line-height:1.5;
+  }
+  header{background:var(--primary); color:#fff; padding:16px 20px;}
+  header h1{margin:0; font-size:1.3rem;}
+  header p{margin:4px 0 0; font-size:0.85rem; opacity:0.9;}
+  .container{max-width:900px; margin:0 auto; padding:16px; padding-bottom:220px;}
+  .disclaimer-banner{
+    background:#fff3cd; border:1px solid #e0a800; border-radius:8px;
+    padding:12px 14px; margin:14px 0; font-size:0.85rem;
+  }
+  .disclaimer-banner strong{display:block; margin-bottom:4px;}
+  details.section{
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    margin-bottom:12px; overflow:hidden;
+  }
+  details.section summary{
+    padding:14px 16px; font-weight:600; cursor:pointer; list-style:none;
+    display:flex; justify-content:space-between; align-items:center;
+    min-height:44px;
+  }
+  details.section summary::after{content:"+"; font-size:1.3rem; color:var(--muted);}
+  details.section[open] summary::after{content:"−";}
+  .section-body{padding:0 16px 16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-weight:600; margin-bottom:4px; font-size:0.92rem;}
+  .field .help{font-size:0.78rem; color:var(--muted); margin-top:3px;}
+  input, select{
+    width:100%; padding:10px 12px; font-size:1rem; border:1px solid var(--border);
+    border-radius:8px; min-height:44px; background:#fff; color:var(--text);
+  }
+  input:focus, select:focus{outline:2px solid var(--primary);}
+  .error{color:var(--bad); font-size:0.8rem; margin-top:4px; display:none;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  @media (max-width:600px){ .grid2{grid-template-columns:1fr;} }
+
+  .result-box{
+    position:sticky; bottom:0; left:0; width:100%;
+    background:var(--card); border-top:3px solid var(--primary);
+    box-shadow:0 -4px 14px rgba(0,0,0,0.1); padding:14px 16px 18px;
+    z-index:50;
+  }
+  .result-hint{
+    font-size:0.78rem; color:var(--muted); background:#eef4f4; border-radius:6px;
+    padding:6px 10px; margin-bottom:8px;
+  }
+  .result-main{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+  .result-value{font-size:1.6rem; font-weight:700;}
+  .result-label{font-size:0.82rem; color:var(--muted);}
+  .tag{padding:4px 10px; border-radius:20px; font-weight:700; font-size:0.85rem; color:#fff;}
+  .tag.good{background:var(--good);}
+  .tag.bad{background:var(--bad);}
+  .subresult{font-size:0.85rem; color:var(--muted); margin-top:6px;}
+  .timeline{
+    display:flex; gap:6px; font-size:0.72rem; margin-top:10px; overflow-x:auto;
+  }
+  .timeline div{
+    flex:1; min-width:90px; background:#eef4f4; border-radius:6px; padding:6px;
+    border:1px solid var(--border);
+  }
+  footer{
+    text-align:center; font-size:0.75rem; color:var(--muted); padding:20px;
+    border-top:1px solid var(--border); margin-top:20px;
+  }
+  .badge-expert{
+    display:inline-flex; align-items:center; gap:8px; margin:10px 0;
+    font-size:0.85rem;
+  }
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex;
+    align-items:center; justify-content:center; z-index:100; padding:16px;
+  }
+  .modal{
+    background:#fff; border-radius:12px; max-width:480px; padding:22px;
+    max-height:85vh; overflow-y:auto;
+  }
+  .modal h2{margin-top:0; font-size:1.1rem;}
+  .modal button{
+    margin-top:14px; background:var(--primary); color:#fff; border:none;
+    padding:10px 18px; border-radius:8px; font-size:1rem; cursor:pointer; min-height:44px;
+  }
+  .source{font-size:0.72rem; color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div class="modal-overlay" id="startModal">
+  <div class="modal">
+    <h2>Wichtiger Hinweis vor der Nutzung</h2>
+    <p>Dieses Tool liefert einen <strong>Schätzwert</strong> auf Basis der von dir eingegebenen Annahmen –
+    keine verbindliche Prognose und <strong>keine Steuerberatung</strong>. Individuelle Faktoren
+    (außergewöhnliche Belastungen, andere Sonderausgaben, Progressionsvorbehalt, Kinderfreibeträge,
+    individuelle Debeka-Tarifvarianten) werden nicht vollständig berücksichtigt. Für eine verbindliche
+    Berechnung wende dich an einen Steuerberater oder deine Finanzverwaltung. Alle Berechnungen laufen
+    ausschließlich in deinem Browser – es werden keine Daten übertragen oder gespeichert.</p>
+    <button onclick="document.getElementById('startModal').style.display='none'">Verstanden, weiter</button>
+  </div>
+</div>
+
+<header>
+  <h1>PKV-BRE Break-Even-Rechner</h1>
+  <p>Für beihilfeberechtigte Bundesbeamte mit Debeka-Beihilfeergänzungstarif</p>
+</header>
+
+<div class="container">
+
+  <div class="disclaimer-banner">
+    <strong>Schätzwert, keine Steuerberatung</strong>
+    Dieser Rechner ersetzt keine individuelle Steuerberatung und berücksichtigt nicht alle persönlichen
+    Faktoren. Die Debeka-BRE ist ohne Rechtsanspruch und schwankt jährlich. Am Jahresanfang ist die
+    tatsächliche Rechnungssumme unbekannt – das Tool zeigt eine nachträgliche Schwelle, keine Prognose.
+  </div>
+
+  <details class="section" open>
+    <summary>Gehalt für Steuerberechnung</summary>
+    <div class="section-body">
+      <div class="grid2">
+        <div class="field">
+          <label for="besoldGruppe">Besoldungsgruppe</label>
+          <select id="besoldGruppe"></select>
+          <div class="help">Bundesbesoldungstabelle Stand 01.05.2026, +2,8% (siehe Quelle im Footer). Bitte jährlich prüfen/aktualisieren.</div>
+        </div>
+        <div class="field">
+          <label for="besoldStufe">Erfahrungsstufe</label>
+          <select id="besoldStufe"></select>
+          <div class="help">Bei B-Besoldung ohne Stufen gibt es nur "0".</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Monatliches Bruttogehalt (automatisch)</label>
+        <input type="text" id="bruttoAnzeige" disabled>
+      </div>
+      <div class="field">
+        <label for="famStand">Familienstand / Steuerklasse</label>
+        <select id="famStand">
+          <option value="single">Ledig / Steuerklasse 1</option>
+          <option value="married_splitting">Verheiratet, Splitting (Steuerklasse 4/4 vereinfachend)</option>
+        </select>
+        <div class="help">Vereinfachte Annahme – individuelle Steuersituation (z.B. Steuerklasse 3/5, Kinder) kann abweichen.</div>
+      </div>
+      <div class="field">
+        <label for="kirche">Kirchensteuerpflichtig?</label>
+        <select id="kirche">
+          <option value="0">Nein</option>
+          <option value="0.08">Ja, 8% (z.B. Bayern, BW)</option>
+          <option value="0.09" selected>Ja, 9% (übrige Bundesländer)</option>
+        </select>
+      </div>
+    </div>
+  </details>
+
+  <details class="section" open>
+    <summary>PKV-Tarif & Selbstbehalt</summary>
+    <div class="section-body">
+      <div class="field">
+        <label for="beihilfeSatz">Beihilfebemessungssatz</label>
+        <input type="number" id="beihilfeSatz" value="50" inputmode="decimal" min="0" max="100" step="1">
+        <div class="help">Anteil, den die Beihilfe trägt. Der Rest ist der PKV-Eigenanteil (Standard: 50%).</div>
+      </div>
+      <div class="field">
+        <label for="monatsbeitrag">PKV-Monatsbeitrag (Beihilfeergänzungstarif, Eigenanteil)</label>
+        <input type="number" id="monatsbeitrag" value="180" inputmode="decimal" min="0" step="1">
+        <div class="help">Dein tatsächlicher Debeka-Beitrag laut Vertrag. Beachte ggf. BGH-Urteile zu Beitragserhöhungen, die diesen Wert beeinflussen könnten.</div>
+      </div>
+      <div class="field">
+        <label for="selbstbehalt">Vereinbarter Selbstbehalt pro Jahr (€)</label>
+        <input type="number" id="selbstbehalt" value="0" inputmode="decimal" min="0" max="5000" step="10">
+        <div class="help">Rechnungen bis zu diesem Betrag sind ohnehin nicht erstattungsfähig und werden vor der Break-Even-Rechnung abgezogen.</div>
+        <div class="error" id="err-selbstbehalt">Bitte einen Wert zwischen 0 € und 5.000 € eingeben.</div>
+      </div>
+    </div>
+  </details>
+
+  <details class="section" open>
+    <summary>BRE-Annahmen (Debeka)</summary>
+    <div class="section-body">
+      <div class="field">
+        <label for="breMonate">BRE-Höhe (in Monatsbeiträgen)</label>
+        <input type="number" id="breMonate" value="2.5" inputmode="decimal" min="0" max="6" step="0.1">
+        <div class="help">Kein Rechtsanspruch! Aktuell ca. 2,0–2,5 Monatsbeiträge im Bisex-Haupttarif, historisch auch bis 4–6 MB (z.B. Azubi-Tarife). Schwankt jährlich – bitte vor Entscheidung aktuelle Debeka-Pressemitteilung prüfen.</div>
+      </div>
+      <div class="field">
+        <label>Zufluss-Timing der BRE</label>
+        <div class="help">Die BRE für Jahr X wird erst im 3. Quartal von Jahr X+1 ausgezahlt und mindert dort die abziehbaren Sonderausgaben – nicht im Jahr X selbst.</div>
+        <div class="timeline" id="timelineBox"></div>
+      </div>
+    </div>
+  </details>
+
+  <details class="section">
+    <summary>Experten-Modus</summary>
+    <div class="section-body">
+      <div class="field">
+        <label><input type="checkbox" id="expertToggle" style="width:auto; min-height:auto; margin-right:8px;">Detailparameter & Sensitivitätsanalyse einblenden</label>
+      </div>
+      <div id="expertFields" style="display:none;">
+        <div class="field">
+          <label for="grenzsteuerOverride">Grenzsteuersatz manuell überschreiben (%, optional)</label>
+          <input type="number" id="grenzsteuerOverride" placeholder="leer = automatisch berechnet" inputmode="decimal" min="0" max="60" step="0.1">
+          <div class="help">Standard: automatisch aus Bruttogehalt/Besoldung inkl. Soli und ggf. Kirchensteuer abgeleitet.</div>
+        </div>
+        <div class="field">
+          <label for="vorsorgeCap">Höchstbetrag "übrige Vorsorgeaufwendungen" (§10 EStG, Beamte)</label>
+          <input type="number" id="vorsorgeCap" value="1900" inputmode="decimal" min="0" step="10">
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <div class="field" style="margin-top:6px;">
+    <div class="help">
+      Hinweis: Einreichungsfrist bei der Debeka ist üblicherweise 2–3 Jahre rückwirkend – spät erkannte
+      Rechnungen können ggf. noch nachgereicht werden. Individuelle Tarifvarianten (z.B. N-Tarife) können
+      von diesen Annahmen abweichen – bitte eigene Vertragsunterlagen abgleichen.
+    </div>
+  </div>
+
+</div>
+
+<div class="result-box">
+  <div class="result-hint">Schätzwert, keine Steuerberatung – nachträgliche Schwelle, keine Zukunftsprognose.</div>
+  <div class="result-main">
+    <div>
+      <div class="result-label">Nominaler Break-Even (ohne Steuereffekt)</div>
+      <div class="result-value" id="breakEvenNominal">–</div>
+    </div>
+    <div>
+      <div class="result-label">Steuerbereinigter Break-Even</div>
+      <div class="result-value" id="breakEvenSteuer">–</div>
+    </div>
+    <span class="tag" id="resultTag">–</span>
+  </div>
+  <div class="subresult" id="resultDetail"></div>
+</div>
+
+<footer>
+  <p><strong>Datenschutz:</strong> Alle Berechnungen erfolgen ausschließlich lokal in deinem Browser.
+  Es werden keine Daten übertragen, gespeichert oder getrackt.</p>
+  <p><strong>Disclaimer:</strong> Dieses Tool ersetzt keine individuelle Steuerberatung und berücksichtigt
+  nicht alle individuellen Faktoren (außergewöhnliche Belastungen, andere Sonderausgaben, individuelle
+  Tarifbesonderheiten, Progressionsvorbehalt, Kinderfreibeträge). Für eine verbindliche Berechnung wende
+  dich an einen Steuerberater oder deine Finanzverwaltung.</p>
+  <p class="source">Besoldungstabelle: oeffentlichen-dienst.de, Stand 01.05.2026 (+2,8%). Debeka-BRE-Werte:
+  Debeka-Pressemitteilungen 2024/2025 (Ø 2,5 Monatsbeiträge, ohne Rechtsanspruch). MIT-Lizenz.</p>
+</footer>
+
+<script>
+/* ==========================================================
+   BUNDESBESOLDUNGSTABELLE – Stand 01.05.2026, +2,8%
+   Quelle: https://www.oeffentlichen-dienst.de/beamte/besoldung/bund/4346-2026.html
+   WICHTIG: Diese Tabelle ändert sich jährlich (i.d.R. jeweils im Frühjahr) –
+   bitte vor Nutzung auf Aktualität prüfen und ggf. ersetzen.
+   Werte = Monatliches Grundgehalt in Euro, Stufen 1–8.
+   ========================================================== */
+const BESOLDUNG = {
+  "A3":[2866.27,2925.90,2985.57,3033.59,3081.60,3129.63,3177.66,3225.67],
+  "A4":[2921.59,2992.87,3064.16,3120.89,3177.66,3234.42,3291.15,3343.56],
+  "A5":[2941.92,3030.68,3101.97,3171.84,3241.72,3313.02,3382.83,3451.24],
+  "A6":[3000.12,3103.46,3208.20,3288.24,3371.20,3451.24,3539.98,3617.11],
+  "A7":[3138.37,3230.07,3350.86,3474.50,3595.28,3717.53,3809.21,3900.87],
+  "A8":[3307.17,3417.78,3573.45,3730.64,3887.77,3996.91,4107.50,4216.64],
+  "A9":[3551.63,3660.77,3832.50,4007.09,4178.78,4295.50,4416.92,4535.33],
+  "A10":[3785.90,3935.78,4152.63,4370.42,4592.27,4746.67,4901.02,5055.47],
+  "A11":[4295.50,4524.81,4752.65,4981.98,5139.35,5296.74,5454.13,5611.55],
+  "A12":[4589.29,4860.59,5133.38,5404.66,5593.53,5779.40,5966.76,6157.12],
+  "A13":[5343.23,5598.03,5851.33,6106.15,6281.51,6458.41,6633.75,6806.11],
+  "A14":[5488.61,5816.86,6146.62,6474.87,6701.18,6929.06,7155.35,7383.21],
+  "A15":[6659.23,6956.02,7182.35,7408.70,7635.02,7859.85,8084.70,8308.00],
+  "A16":[7323.25,7668.02,7928.80,8189.62,8448.92,8711.24,8972.03,9229.88],
+  "B1":[8308.00],"B2":[9615.07],"B3":[10168.14],"B4":[10746.71],
+  "B5":[11410.74],"B6":[12041.80],"B7":[12650.33],"B8":[13287.33],
+  "B9":[14077.27],"B10":[16530.96],"B11":[17030.76]
+};
+
+function populateBesoldung(){
+  const grpSel = document.getElementById('besoldGruppe');
+  Object.keys(BESOLDUNG).forEach(g=>{
+    const o=document.createElement('option'); o.value=g; o.textContent=g; grpSel.appendChild(o);
+  });
+  grpSel.value = "A13";
+  updateStufenOptions();
+}
+function updateStufenOptions(){
+  const g = document.getElementById('besoldGruppe').value;
+  const stufeSel = document.getElementById('besoldStufe');
+  stufeSel.innerHTML = "";
+  BESOLDUNG[g].forEach((v,i)=>{
+    const o=document.createElement('option'); o.value=i; o.textContent = BESOLDUNG[g].length>1 ? "Stufe "+(i+1) : "—";
+    stufeSel.appendChild(o);
+  });
+}
+
+/* ==========================================================
+   VEREINFACHTES EINKOMMENSTEUER-MODELL (Grundtarif/Splitting)
+   Approximation der Formel nach §32a EStG für 2026 (fortgeschrieben).
+   Dient nur der Ableitung eines plausiblen Grenzsteuersatzes –
+   kein Ersatz für eine echte Veranlagung.
+   ========================================================== */
+function grundtarifSteuer(zvE){
+  // Eckwerte grob fortgeschrieben (Grundfreibetrag ca. 12.100€ für 2026)
+  const GFB = 12100, E1=17400, E2=68480, E3=277825;
+  if(zvE<=GFB) return 0;
+  if(zvE<=E1){
+    const y=(zvE-GFB)/10000;
+    return (932.3*y+1400)*y;
+  } else if(zvE<=E2){
+    const z=(zvE-E1)/10000;
+    return (176.57*z+2397)*z + 1015.13; // grobe Fortschreibung
+  } else if(zvE<=E3){
+    return 0.42*zvE - 9972.98;
+  } else {
+    return 0.45*zvE - 18307.73;
+  }
+}
+function grenzsteuersatzMitSoli(zvE, splitting, kirchensatz){
+  const basis = splitting ? zvE/2 : zvE;
+  const stepUp = basis + 100;
+  const t0 = splitting ? 2*grundtarifSteuer(basis) : grundtarifSteuer(basis);
+  const t1 = splitting ? 2*grundtarifSteuer(stepUp) : grundtarifSteuer(stepUp);
+  let marginalESt = (t1-t0)/(splitting?200:100);
+  // Solidaritätszuschlag: seit 2021 nur noch für hohe Einkommen relevant (vereinfachte Freigrenze)
+  const soliFreigrenze = splitting ? 35086 : 17543;
+  let effektiv = marginalESt;
+  if(zvE > soliFreigrenze) effektiv += marginalESt*0.055;
+  if(kirchensatz>0) effektiv += marginalESt*kirchensatz;
+  return Math.max(0, Math.min(0.55, effektiv));
+}
+
+/* ========================================================== */
+
+function bruttoJahrFromBesoldung(){
+  const g = document.getElementById('besoldGruppe').value;
+  const s = parseInt(document.getElementById('besoldStufe').value);
+  const monat = BESOLDUNG[g][s];
+  document.getElementById('bruttoAnzeige').value = monat.toLocaleString('de-DE',{minimumFractionDigits:2})+" € / Monat";
+  return monat*12;
+}
+
+function validate(){
+  let ok = true;
+  const sb = parseFloat(document.getElementById('selbstbehalt').value);
+  const errSb = document.getElementById('err-selbstbehalt');
+  if(isNaN(sb) || sb<0 || sb>5000){ errSb.style.display='block'; ok=false; } else { errSb.style.display='none'; }
+  return ok;
+}
+
+function renderTimeline(){
+  const box = document.getElementById('timelineBox');
+  box.innerHTML = `
+    <div><strong>Jahr X</strong><br>Keine Rechnung eingereicht</div>
+    <div><strong>Q3, Jahr X+1</strong><br>BRE wird ausgezahlt</div>
+    <div><strong>Steuererklärung X+1</strong><br>BRE mindert Sonderausgaben in X+1, nicht in X</div>
+  `;
+}
+
+function calc(){
+  if(!validate()){ return; }
+
+  const bruttoJahr = bruttoJahrFromBesoldung();
+  const beihilfeSatz = parseFloat(document.getElementById('beihilfeSatz').value)/100;
+  const eigenanteilFaktor = 1 - beihilfeSatz;
+  const monatsbeitrag = parseFloat(document.getElementById('monatsbeitrag').value)||0;
+  const selbstbehalt = parseFloat(document.getElementById('selbstbehalt').value)||0;
+  const breMonate = parseFloat(document.getElementById('breMonate').value)||0;
+  const splitting = document.getElementById('famStand').value === "married_splitting";
+  const kirchensatz = parseFloat(document.getElementById('kirche').value)||0;
+  const vorsorgeCap = parseFloat(document.getElementById('vorsorgeCap').value)||1900;
+
+  const bre = monatsbeitrag * breMonate;
+
+  let grenzsteuersatz;
+  const override = document.getElementById('grenzsteuerOverride').value;
+  if(override){
+    grenzsteuersatz = parseFloat(override)/100;
+  } else {
+    grenzsteuersatz = grenzsteuersatzMitSoli(bruttoJahr, splitting, kirchensatz);
+  }
+
+  /* NOMINALER BREAK-EVEN (ohne Steuereffekt):
+     Rechnungssumme (PKV-Eigenanteil) über der Jahresgrenze,
+     ab der Einreichen (Erstattung) > BRE-Verzicht.
+     Break-Even (PKV-Eigenanteil) = BRE  =>  Rechnungssumme_brutto = Selbstbehalt + BRE / eigenanteilFaktor
+     (der Eigenanteilsfaktor wird hier nur zur Rückrechnung auf die Gesamtrechnung verwendet;
+      die eigentliche Vergleichsgröße ist der PKV-Eigenanteil selbst) */
+  const breakEvenEigenanteilNominal = bre; // PKV-Eigenanteil-Schwelle ohne Steuer
+  const breakEvenGesamtrechnungNominal = selbstbehalt + breakEvenEigenanteilNominal / eigenanteilFaktor;
+
+  /* STEUERBEREINIGTER BREAK-EVEN:
+     Wird die BRE nicht kassiert (Rechnung wird eingereicht), bleiben die PKV-Beiträge in voller Höhe
+     als Sonderausgaben abziehbar (soweit Cap nicht überschritten) -> Steuervorteil S1.
+     Wird die BRE kassiert, mindert sie im Folgejahr die abziehbaren Sonderausgaben um den BRE-Betrag
+     -> Steuernachteil = BRE * Grenzsteuersatz (soweit im Rahmen des Caps).
+     Der steuerliche Effekt verschiebt den Break-Even zugunsten des NICHT-Einreichens, da die kassierte
+     BRE nur netto (nach Steuernachteil) vorteilhaft ist. */
+  const steuerNachteilBRE = bre * grenzsteuersatz; // vereinfachte Annahme: BRE senkt Sonderausgaben in vollem Umfang
+  const breNetto = bre - steuerNachteilBRE;
+
+  const breakEvenEigenanteilSteuer = breNetto;
+  const breakEvenGesamtrechnungSteuer = selbstbehalt + breakEvenEigenanteilSteuer / eigenanteilFaktor;
+
+  document.getElementById('breakEvenNominal').textContent =
+    breakEvenGesamtrechnungNominal.toLocaleString('de-DE',{maximumFractionDigits:0})+" €";
+  document.getElementById('breakEvenSteuer').textContent =
+    breakEvenGesamtrechnungSteuer.toLocaleString('de-DE',{maximumFractionDigits:0})+" €";
+
+  const tag = document.getElementById('resultTag');
+  tag.textContent = "Ab dieser Gesamtrechnungssumme lohnt sich Einreichen";
+  tag.className = "tag good";
+
+  document.getElementById('resultDetail').innerHTML =
+    `Erwartete BRE (netto nach Steuereffekt): ca. <strong>${breNetto.toLocaleString('de-DE',{maximumFractionDigits:0})} €</strong> `+
+    `(brutto ${bre.toLocaleString('de-DE',{maximumFractionDigits:0})} €). `+
+    `Angenommener Grenzsteuersatz (inkl. Soli/Kirchensteuer): <strong>${(grenzsteuersatz*100).toFixed(1)}%</strong> `+
+    `bei einem Jahresbrutto von ${bruttoJahr.toLocaleString('de-DE',{maximumFractionDigits:0})} €. `+
+    `Selbstbehalt bereits berücksichtigt: ${selbstbehalt.toLocaleString('de-DE')} €.`;
+}
+
+document.getElementById('besoldGruppe').addEventListener('change', ()=>{updateStufenOptions(); calc();});
+['besoldStufe','beihilfeSatz','monatsbeitrag','selbstbehalt','breMonate','famStand','kirche',
+ 'grenzsteuerOverride','vorsorgeCap'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', calc);
+  document.getElementById(id).addEventListener('change', calc);
+});
+document.getElementById('expertToggle').addEventListener('change', function(){
+  document.getElementById('expertFields').style.display = this.checked ? 'block' : 'none';
+});
+
+populateBesoldung();
+renderTimeline();
+calc();
+</script>
+</body>
+</html>
